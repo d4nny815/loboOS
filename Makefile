@@ -1,72 +1,87 @@
-CC = x86_64-elf-gcc
-CFLAGS = -Wall -Werror -g 
-LINKER_LD = x86_64-elf-ld
+CC          = x86_64-elf-gcc
+LD          = x86_64-elf-ld
+NASM        = nasm
 
-KERNEL_BIN = kernel.bin
-DISK_IMG = os.img
+CFLAGS      = -Wall -Werror -g
+ASMFLAGS    = -felf64
+LDFLAGS     = -n -T $(LINKER_PATH)
 
-SRC_DIR = src
-BUILD_DIR = build
+KERNEL_BIN  = kernel.bin
+DISK_IMG    = os.img
 
-LOOPBACK_NUM_DISK := $(shell python3 loopback.py)
-LOOPBACK_NUM_DATA := $(shell python3 loopback.py 1)
-LOOPBACK_DISK_DEV = /dev/loop$(LOOPBACK_NUM_DISK)
-LOOPBACK_DATA_DEV = /dev/loop$(LOOPBACK_NUM_DATA)
-MNT_OS_DIR = /mnt/osfiles
+SRC_DIR     = src
+BUILD_DIR   = build
 
 LINKER_PATH = $(SRC_DIR)/arch/x86_64/linker.ld
-GRUB_CFG_PATH = $(SRC_DIR)/arch/x86_64/grub.cfg
+GRUB_CFG    = $(SRC_DIR)/arch/x86_64/grub.cfg
+MOUNT_DIR   = /mnt/osfiles
 
-ASM_SRC_FILES := $(wildcard $(SRC_DIR)/arch/x86_64/*.asm)
-ASM_OBJ_FILES := $(patsubst $(SRC_DIR)/arch/x86_64/%.asm, \
-	build/%.o, $(ASM_SRC_FILES))
+LOOP_DISK_NUM := $(shell python3 loopback.py)
+LOOP_DATA_NUM := $(shell python3 loopback.py 1)
+LOOP_DISK_DEV = /dev/loop$(LOOP_DISK_NUM)
+LOOP_DATA_DEV = /dev/loop$(LOOP_DATA_NUM)
 
-C_SRC_FILES := $(wildcard $(SRC_DIR)/*.c)
-C_OBJ_FILES := $(patsubst $(SRC_DIR)/%.c, \
-	build/%.o, $(C_SRC_FILES))
+ASM_SRC     := $(wildcard $(SRC_DIR)/arch/x86_64/*.asm)
+ASM_OBJS    := $(patsubst $(SRC_DIR)/arch/x86_64/%.asm,$(BUILD_DIR)/%.o,$(ASM_SRC))
 
-.PHONY: all clean kernel disk
+C_SRC       := $(wildcard $(SRC_DIR)/*.c)
+C_OBJS      := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRC))
+
+.PHONY: all kernel disk qemu clean dirs
 
 all: kernel
 
-disk: $(DISK_IMG) 
+dirs:
+	mkdir -p $(BUILD_DIR)
 
-$(DISK_IMG): $(BUILD_DIR)/$(KERNEL_BIN) $(GRUB_CFG_PATH)
+# =========================================================
+# Build Kernel
+# =========================================================
+
+kernel: dirs $(BUILD_DIR)/$(KERNEL_BIN)
+
+$(BUILD_DIR)/$(KERNEL_BIN): $(ASM_OBJS) $(C_OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+# build asm files
+$(BUILD_DIR)/%.o: $(SRC_DIR)/arch/x86_64/%.asm
+	$(NASM) $(ASMFLAGS) $< -o $@
+
+# build c files
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# =========================================================
+# Build disk image and running
+# =========================================================
+
+disk: $(DISK_IMG)
+
+$(DISK_IMG): $(BUILD_DIR)/$(KERNEL_BIN) $(GRUB_CFG)
 	dd if=/dev/zero of=$@ bs=512 count=32768
 	parted $@ mklabel msdos
 	parted $@ mkpart primary ext2 2048s 30720s
 	parted $@ set 1 boot on
-	sudo losetup $(LOOPBACK_DISK_DEV) $@
-	sudo losetup $(LOOPBACK_DATA_DEV) $@ -o 1048576
-	sudo mkfs.ext2 $(LOOPBACK_DATA_DEV)
-	sudo mkdir -p $(MNT_OS_DIR)
-	sudo mount $(LOOPBACK_DATA_DEV) $(MNT_OS_DIR)
-	sudo grub-install --root-directory=$(MNT_OS_DIR) --no-floppy \
+	sudo losetup $(LOOP_DISK_DEV) $@
+	sudo losetup $(LOOP_DATA_DEV) $@ -o 1048576
+	sudo mkfs.ext2 $(LOOP_DATA_DEV)
+	sudo mkdir -p $(MOUNT_DIR)
+	sudo mount $(LOOP_DATA_DEV) $(MOUNT_DIR)
+	sudo grub-install --root-directory=$(MOUNT_DIR) --no-floppy \
 		--target=i386-pc --modules="normal part_msdos ext2 multiboot" \
-		$(LOOPBACK_DISK_DEV)
-	sudo cp $(BUILD_DIR)/$(KERNEL_BIN) $(MNT_OS_DIR)/boot/kernel.bin
-	sudo cp $(GRUB_CFG_PATH) $(MNT_OS_DIR)/boot/grub
-	sudo umount $(MNT_OS_DIR)
-	sudo losetup -d $(LOOPBACK_DISK_DEV)
-	sudo losetup -d $(LOOPBACK_DATA_DEV)
-
-
-kernel: $(BUILD_DIR)/$(KERNEL_BIN)
-
-$(BUILD_DIR)/$(KERNEL_BIN): $(ASM_OBJ_FILES) $(C_OBJ_FILES)
-	$(LINKER_LD) -n -o $@ -T $(LINKER_PATH) $^
-
-# Assembly Boot Files
-build/%.o: src/arch/x86_64/%.asm
-	mkdir -p $(BUILD_DIR)
-	nasm -felf64 $< -o $@
-
-# C Source Files
-build/%.o: src/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+		$(LOOP_DISK_DEV)
+	sudo cp $(BUILD_DIR)/$(KERNEL_BIN) $(MOUNT_DIR)/boot/kernel.bin
+	sudo cp $(GRUB_CFG) $(MOUNT_DIR)/boot/grub
+	sudo umount $(MOUNT_DIR)
+	sudo losetup -d $(LOOP_DISK_DEV)
+	sudo losetup -d $(LOOP_DATA_DEV)
 
 qemu: $(DISK_IMG)
 	qemu-system-x86_64 -drive format=raw,file=$(DISK_IMG)
 
-clean: 
+# =========================================================
+# Clean up
+# =========================================================
+
+clean:
 	rm -rf $(BUILD_DIR) $(DISK_IMG)
