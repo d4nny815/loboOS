@@ -1,5 +1,6 @@
-CC          = x86_64-elf-gcc
-LD          = x86_64-elf-ld
+COMP_PATH 	= /opt/x86_64/bin
+CC          = $(COMP_PATH)/x86_64-elf-gcc
+LD          = $(COMP_PATH)/x86_64-elf-ld
 NASM        = nasm
 
 CFLAGS      = -Wall -Werror -g
@@ -9,6 +10,7 @@ LDFLAGS     = -n -T $(LINKER_PATH)
 KERNEL_BIN  = kernel.bin
 DISK_IMG    = os.img
 
+SCRIPT_DIR  = scripts
 SRC_DIR     = src
 BUILD_DIR   = build
 
@@ -16,8 +18,8 @@ LINKER_PATH = $(SRC_DIR)/arch/x86_64/linker.ld
 GRUB_CFG    = $(SRC_DIR)/arch/x86_64/grub.cfg
 MOUNT_DIR   = /mnt/osfiles
 
-LOOP_DISK_NUM := $(shell python3 loopback.py)
-LOOP_DATA_NUM := $(shell python3 loopback.py 1)
+LOOP_DISK_NUM := $(shell python3 $(SCRIPT_DIR)/loopback.py)
+LOOP_DATA_NUM := $(shell python3 $(SCRIPT_DIR)/loopback.py 1)
 LOOP_DISK_DEV = /dev/loop$(LOOP_DISK_NUM)
 LOOP_DATA_DEV = /dev/loop$(LOOP_DATA_NUM)
 
@@ -57,7 +59,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 
 disk: $(DISK_IMG)
 
-$(DISK_IMG): $(BUILD_DIR)/$(KERNEL_BIN) $(GRUB_CFG)
+$(DISK_IMG): kernel $(GRUB_CFG)
 	dd if=/dev/zero of=$@ bs=512 count=32768
 	parted $@ mklabel msdos
 	parted $@ mkpart primary ext2 2048s 30720s
@@ -72,6 +74,7 @@ $(DISK_IMG): $(BUILD_DIR)/$(KERNEL_BIN) $(GRUB_CFG)
 		$(LOOP_DISK_DEV)
 	sudo cp $(BUILD_DIR)/$(KERNEL_BIN) $(MOUNT_DIR)/boot/kernel.bin
 	sudo cp $(GRUB_CFG) $(MOUNT_DIR)/boot/grub
+	tree $(MOUNT_DIR) -I 'i386-pc'
 	sudo umount $(MOUNT_DIR)
 	sudo losetup -d $(LOOP_DISK_DEV)
 	sudo losetup -d $(LOOP_DATA_DEV)
