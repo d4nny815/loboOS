@@ -3,9 +3,9 @@ CC          = $(COMP_PATH)/x86_64-elf-gcc
 LD          = $(COMP_PATH)/x86_64-elf-ld
 NASM        = nasm
 
-CFLAGS      = -Wall -Werror -g
+CFLAGS      = -Wall -Werror -g -ffreestanding -mno-red-zone
 ASMFLAGS    = -felf64
-LDFLAGS     = -n -T $(LINKER_PATH)
+LDFLAGS     = -n -T $(LINKER_PATH) -nostdlib -lgcc -ffreestanding
 
 KERNEL_BIN  = kernel.bin
 DISK_IMG    = os.img
@@ -70,11 +70,10 @@ $(DISK_IMG): kernel $(GRUB_CFG)
 	sudo mkdir -p $(MOUNT_DIR)
 	sudo mount $(LOOP_DATA_DEV) $(MOUNT_DIR)
 	sudo grub-install --root-directory=$(MOUNT_DIR) --no-floppy \
-		--target=i386-pc --modules="normal part_msdos ext2 multiboot" \
+		--target=i386-pc --modules="normal part_msdos ext2 multiboot2" \
 		$(LOOP_DISK_DEV)
 	sudo cp $(BUILD_DIR)/$(KERNEL_BIN) $(MOUNT_DIR)/boot/kernel.bin
 	sudo cp $(GRUB_CFG) $(MOUNT_DIR)/boot/grub
-	tree $(MOUNT_DIR) -I 'i386-pc'
 	sudo umount $(MOUNT_DIR)
 	sudo losetup -d $(LOOP_DISK_DEV)
 	sudo losetup -d $(LOOP_DATA_DEV)
