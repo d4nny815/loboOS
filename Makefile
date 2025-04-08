@@ -5,7 +5,7 @@ NASM        = nasm
 
 CFLAGS      = -Wall -Werror -g -ffreestanding -mno-red-zone
 ASMFLAGS    = -felf64
-LDFLAGS     = -n -T $(LINKER_PATH) -nostdlib -lgcc -ffreestanding
+LDFLAGS     = -n -T $(LINKER_PATH) -nostdlib 
 
 KERNEL_BIN  = kernel.bin
 DISK_IMG    = os.img
@@ -79,7 +79,7 @@ $(DISK_IMG): kernel $(GRUB_CFG)
 	sudo losetup -d $(LOOP_DATA_DEV)
 
 qemu: $(DISK_IMG)
-	qemu-system-x86_64 -drive format=raw,file=$(DISK_IMG)
+	qemu-system-x86_64 -s -drive format=raw,file=$(DISK_IMG)
 
 # =========================================================
 # Clean up

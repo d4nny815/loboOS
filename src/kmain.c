@@ -1,12 +1,33 @@
-typedef unsigned short uint16_t;
+#include "myint.h"
+#include "mybool.h"
+#include "vga.h"
 
 void kmain(void) {
-  volatile uint16_t* video = (uint16_t*)0xB8000;
+  int db_flag = 1;
+  while (!db_flag);
+  
+  VGA_clear();
 
-  video[0] = ('S' | 0x2f00);
-  video[1] = ('I' | 0x2f00);
-  video[2] = ('C' | 0x2f00);
-  video[3] = ('K' | 0x2f00);
+  VGA_display_char('c');
+  VGA_display_str("Testing a string\n");
+
+  bool k = 0;
+  for (int j = 0; j < 18; j++) {
+    if (k)
+    for (int i = 0; i < 10; i++) VGA_display_char('X');
+    
+    else
+    for (int i = 0; i < 10; i++) VGA_display_char('Y');
+  
+    VGA_display_char('\n');
+    k = !k;
+  }
+  VGA_display_str("Testing1 a string\n");
+
+  VGA_display_str("Testing2 a string\n");
+
+  VGA_display_str("Testing3 a string\n");
+
 
   while(1);
 }
