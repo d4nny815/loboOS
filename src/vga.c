@@ -4,7 +4,7 @@
 
 static uint16_t* vga_buffer = (uint16_t*)VGA_BASE;
 static int cursor = 0;
-static uint8_t color = FG(0xf) | BG(0);
+static uint8_t color = FG(VGA_GREEN) | BG(VGA_BLACK);
 const int WIDTH = 80;
 const int HEIGHT = 20;
 const int BUF_SIZE = WIDTH * HEIGHT;
