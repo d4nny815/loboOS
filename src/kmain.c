@@ -1,9 +1,10 @@
-#include "myint.h"
-#include "mybool.h"
+#include <stdint.h>
+#include <stdbool.h>
+
 #include "vga.h"
 
 void kmain(void) {
-  int db_flag = 1;
+  bool db_flag = 1;
   while (!db_flag);
   
   VGA_clear();

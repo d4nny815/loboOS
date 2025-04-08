@@ -1,6 +1,5 @@
 #include "vga.h"
 
-#include "myint.h"
 #include "string.h"
 
 static uint16_t* vga_buffer = (uint16_t*)VGA_BASE;

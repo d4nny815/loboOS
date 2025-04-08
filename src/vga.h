@@ -1,7 +1,7 @@
 #ifndef VGA_H
 #define VGA_H
 
-#include "myint.h"
+#include <stdint.h>
 
 #define VGA_BASE  (0xb8000)
 #define FG(x)     (x & 0xf)
