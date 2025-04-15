@@ -29,6 +29,9 @@ ASM_OBJS    := $(patsubst $(SRC_DIR)/arch/x86_64/%.asm,$(BUILD_DIR)/%.o,$(ASM_SR
 C_SRC       := $(wildcard $(SRC_DIR)/*.c)
 C_OBJS      := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRC))
 
+GDB					= $(COMP_PATH)/x86_64-elf-gdb
+GDB_CFG			= $(shell pwd)/.gdbinit
+
 .PHONY: all kernel disk qemu clean dirs
 
 all: kernel
@@ -80,6 +83,10 @@ $(DISK_IMG): kernel $(GRUB_CFG)
 
 qemu: $(DISK_IMG)
 	qemu-system-x86_64 -s -drive format=raw,file=$(DISK_IMG)
+
+
+debug:
+	$(GDB) -x $(GDB_CFG)
 
 # =========================================================
 # Clean up
