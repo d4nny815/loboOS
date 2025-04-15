@@ -9,7 +9,7 @@
 void printk_tests();
 
 void kmain(void) {
-  bool db_flag = 0;
+  bool db_flag = 1;
   while (!db_flag);
   
   VGA_clear();
@@ -23,6 +23,7 @@ void kmain(void) {
 
   while(1) {
     // echo
+    printk("%x\n", get_key());
   }
 }
 

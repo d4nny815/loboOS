@@ -7,7 +7,14 @@
 #define PS2_STATUS_OUTPUT   (1)
 #define PS2_STATUS_INPUT    (1 << 1)
 
+#define KB_ACK              (0xFA)
+#define KB_RESEND           (0xFE)
+#define KB_TESTPASSED       (0xAA)
+
+
 void ps2_ctrl_init();
 void keyboard_init();
+
+char get_key();
 
 #endif /* keyboard.h */

@@ -2,15 +2,7 @@
 
 #include "print.h"
 #include "portIO.h"
-
-
-static inline uint8_t poll_status(uint8_t bit) {
-  uint8_t status = inb(PS2_STATUS);
-  while (!(status & bit)) {
-    status = inb(PS2_STATUS);
-  }
-  return inb(PS2_STATUS);
-}
+#include <stdbool.h>
 
 static inline void wait_input_clear() {
   while (inb(PS2_STATUS) & PS2_STATUS_INPUT);
@@ -20,8 +12,20 @@ static inline void wait_output_set() {
   while (!(inb(PS2_STATUS) & PS2_STATUS_OUTPUT));
 }
 
+static inline void keyboard_send_cmd(uint8_t cmd) {
+  uint8_t ack;
+  do {
+    wait_input_clear();
+    outb(PS2_DATA, cmd);
+    
+    wait_output_set();
+    ack = inb(PS2_DATA);
+
+  } while (ack == KB_RESEND);
+}
+
 void ps2_ctrl_init() {
-  printk("[KEYBOARD] initing ps2 controller\n");
+  printk("[KEYBOARD] Initing ps2 controller\n");
   // ? do i check if ps2 controller exists even on qemu?
 
   // disable ps2 port1
@@ -81,16 +85,39 @@ void ps2_ctrl_init() {
   wait_input_clear();
   outb(PS2_CMD, 0xAE);
   
-  printk("[KEYBOARD] Done initializing PS2 Controller\n");
+  printk("[KEYBOARD] Done initing PS2 Controller\n");
 }
 
 void keyboard_init() {
-  ps2_ctrl_init();
   // init ps2 ctrl
+  ps2_ctrl_init();
 
   // reset keyboard
-  
-  // set keyboard to scan code
+  wait_input_clear();
+  outb(PS2_DATA, 0xFF);
 
+  wait_output_set();
+  uint8_t ack = inb(PS2_DATA);
+  
+  wait_output_set();
+  uint8_t self_test = inb(PS2_DATA);
+  
+  if (ack != KB_ACK || self_test != KB_TESTPASSED) {
+    printk("[KEYBOARD] Keyboard self test failed\n");
+    return;
+  }
+
+  // set keyboard to scan code
+  keyboard_send_cmd(0xF0);
+  keyboard_send_cmd(0x2);
+  
   // enable keyboard
+  keyboard_send_cmd(0xF4);
+}
+
+char get_key() {
+  wait_output_set();
+  uint8_t scan_code = inb(PS2_DATA);
+
+  return scan_code;
 }
