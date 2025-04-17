@@ -8,6 +8,7 @@
 
 #define PRINT_BUF_SIZE  (100) // TODO: make actual length
 static char* DIGIT_LUT = "0123456789abcdef";
+static char* DIGIT_LUT_CAP = "0123456789ABCDEF";
 
 typedef long long ll;
 typedef unsigned long long ull;
@@ -59,6 +60,10 @@ int printk(const char *fmt, ...) {
             case 'u':
               print_integer((unsigned short)(va_arg(arg, unsigned int)));
               break;
+
+            case 'x':
+              print_long_hex((unsigned short)(va_arg(arg, unsigned int)), false);
+              break;
           }
           break;
         
@@ -71,6 +76,10 @@ int printk(const char *fmt, ...) {
   
             case 'u':
               print_unsigned_integer((ull)(va_arg(arg, ull)));
+              break;
+            
+            case 'x':
+              print_long_hex((ull)(va_arg(arg, ull)), false);
               break;
           }
           break;
@@ -160,7 +169,7 @@ void print_long_hex(unsigned long l, bool prefix) {
 
   while (l) {
     p_buf--;
-    *p_buf = DIGIT_LUT[l & 0xf];
+    *p_buf = prefix ? DIGIT_LUT_CAP[l & 0xf] : DIGIT_LUT[l & 0xf];
     l >>= 4;
   }
 
