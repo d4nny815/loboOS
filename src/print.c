@@ -25,7 +25,7 @@ int printk(const char *fmt, ...) {
 
   for (size_t i = 0; fmt[i] != '\0'; i++) {
     if (fmt[i] != '%') {
-      if (fmt[i] == '\0') goto printk_end;
+      if (fmt[i] == '\0') break;
       print_char(fmt[i]);
     } 
     else {
@@ -90,7 +90,6 @@ int printk(const char *fmt, ...) {
     }
   }
 
-  printk_end:
   va_end(arg); 
 
   return 0;

@@ -19,11 +19,11 @@ void kmain(void) {
 
   printk_tests();
 
-  // keyboard_init();
+  keyboard_init();
 
   while(1) {
     // echo
-    // printk("%hx\n", get_key());
+    printk("%c", get_key());
   }
 }
 
