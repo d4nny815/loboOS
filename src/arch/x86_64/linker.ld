@@ -1,7 +1,7 @@
 ENTRY(start)
 
 SECTIONS {
-    . = 1M;
+    . = 1M; /* this is empty mem */
 
     .boot :
     {
