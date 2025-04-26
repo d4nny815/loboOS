@@ -21,6 +21,10 @@ void kmain(void) {
 
   keyboard_init();
 
+  printk("Press SPACE to clear screen\n");
+  while (get_key() != ' '); 
+  VGA_clear();
+
   while(1) {
     // echo
     printk("%c", get_key());

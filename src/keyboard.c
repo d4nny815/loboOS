@@ -1,9 +1,19 @@
-#include "keyboard.h"
+/****************************************************************************
+ *  keyboard.c
+ ****************************************************************************/
 
-#include "print.h"
-#include "portIO.h"
+/* === Public headers ===================================================== */
 #include <stdbool.h>
 
+/* === Project headers ==================================================== */
+#include "keyboard.h"
+#include "print.h"
+#include "portIO.h"
+
+/* === Private (module-only) headers ====================================== */
+
+
+/* === Compile-time configuration macros ================================= */
 #define PS2_DATA            (0x60)
 #define PS2_CMD             (0x64)
 #define PS2_STATUS          (PS2_CMD)
@@ -14,10 +24,15 @@
 #define KB_RESEND           (0xFE)
 #define KB_TESTPASSED       (0xAA)
 
-static void ps2_ctrl_init();
-static char get_scancode();
+/* === Diagnostics switches (undef to disable) ============================ */
+// #if defined(DEBUG) && DEBUG
+// #   define DBG(fmt, ...) printf(MODULE_TAG ": " fmt "\n", ##__VA_ARGS__)
+// #else
+// #   define DBG(...)      do {} while (0)
+// #endif
 
-const char scancode_map_unshifted[128] = {
+/* === File-scope constants ============================================== */
+static const char scancode_map_unshifted[128] = {
   [0x1C] = 'a',
   [0x32] = 'b',
   [0x21] = 'c',
@@ -71,7 +86,7 @@ const char scancode_map_unshifted[128] = {
   [0x4A] = '/'
 };
 
-const char scancode_map_shifted[128] = {
+static const char scancode_map_shifted[128] = {
   [0x1C] = 'A',
   [0x32] = 'B',
   [0x21] = 'C',
@@ -125,6 +140,77 @@ const char scancode_map_shifted[128] = {
   [0x4A] = '?'
 };
 
+/* === File-scope types =================================================== */
+// typedef struct {int x};
+
+/* === File-scope  variables ===================================== */
+// static int x;
+
+/* === private function prototypes ============================== */
+static void ps2_ctrl_init();
+static char get_scancode();
+static inline void wait_output_set();
+static inline void wait_input_clear();
+static inline void keyboard_send_cmd(uint8_t cmd);
+
+/* === Public function definitions ======================================= */
+void keyboard_init() {
+  printk("[KEYBOARD] Initing keyboard driver\n");
+
+  // init ps2 ctrl
+  ps2_ctrl_init();
+
+  // reset keyboard
+  wait_input_clear();
+  outb(PS2_DATA, 0xFF);
+
+  wait_output_set();
+  uint8_t ack = inb(PS2_DATA);
+  
+  wait_output_set();
+  uint8_t self_test = inb(PS2_DATA);
+  
+  if (ack != KB_ACK || self_test != KB_TESTPASSED) {
+    printk("[KEYBOARD] Keyboard self test failed\n");
+    return;
+  }
+
+  // set keyboard to scan code
+  keyboard_send_cmd(0xF0);
+  keyboard_send_cmd(0x2);
+  
+  // enable keyboard
+  keyboard_send_cmd(0xF4);
+
+  printk("[KEYBOARD] Done initing Keyboard\n");
+}
+
+char get_key() {
+  static bool shift_flag = false;
+  
+  while (1) {
+    uint8_t scan_code = get_scancode();
+
+    if (scan_code == 0x12) {
+      shift_flag = true;
+      continue;
+    } 
+    if (scan_code == 0xf0) {
+      scan_code = get_scancode();
+      if (scan_code == 0x12) shift_flag = false;
+      continue;
+    }
+
+    if (shift_flag) {
+      return scancode_map_shifted[scan_code];
+    } else {
+      return scancode_map_unshifted[scan_code];
+    }
+  }
+  // printk("%hx     ", scan_code);
+}
+
+/* === Private (static) function definitions ============================= */
 static inline void wait_input_clear() {
   while (inb(PS2_STATUS) & PS2_STATUS_INPUT);
 }
@@ -208,61 +294,7 @@ static void ps2_ctrl_init() {
   printk("[KEYBOARD] Done initing PS2 Controller\n");
 }
 
-void keyboard_init() {
-  printk("[KEYBOARD] Initing keyboard driver\n");
 
-  // init ps2 ctrl
-  ps2_ctrl_init();
-
-  // reset keyboard
-  wait_input_clear();
-  outb(PS2_DATA, 0xFF);
-
-  wait_output_set();
-  uint8_t ack = inb(PS2_DATA);
-  
-  wait_output_set();
-  uint8_t self_test = inb(PS2_DATA);
-  
-  if (ack != KB_ACK || self_test != KB_TESTPASSED) {
-    printk("[KEYBOARD] Keyboard self test failed\n");
-    return;
-  }
-
-  // set keyboard to scan code
-  keyboard_send_cmd(0xF0);
-  keyboard_send_cmd(0x2);
-  
-  // enable keyboard
-  keyboard_send_cmd(0xF4);
-
-  printk("[KEYBOARD] Done initing Keyboard\n");
-}
-
-char get_key() {
-  static bool shift_flag = false;
-  
-  while (1) {
-    uint8_t scan_code = get_scancode();
-
-    if (scan_code == 0x12) {
-      shift_flag = true;
-      continue;
-    } 
-    if (scan_code == 0xf0) {
-      scan_code = get_scancode();
-      if (scan_code == 0x12) shift_flag = false;
-      continue;
-    }
-
-    if (shift_flag) {
-      return scancode_map_shifted[scan_code];
-    } else {
-      return scancode_map_unshifted[scan_code];
-    }
-  }
-  // printk("%hx     ", scan_code);
-}
 
 static char get_scancode() {
   wait_output_set();
@@ -270,3 +302,5 @@ static char get_scancode() {
 
   return scan_code;  
 }
+
+/* === End of file ======================================================= */

@@ -29,6 +29,7 @@ void VGA_set_color(uint8_t opts) {
 // clear the VGA screen
 void VGA_clear(void) {
   memset(vga_buffer, 0, BUF_SIZE * sizeof(uint16_t));
+  cursor = 0;
 }
 
 // write a char to the screen
