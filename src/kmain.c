@@ -16,7 +16,7 @@ void irq_69(int intr_num, int err_code, void* state) {
   printk("Interrupt properly 0x69\n");
 }
 
-bool db_flag = 0;
+bool db_flag = 1;
 void kmain(void) {
   while (!db_flag);
   
@@ -30,29 +30,28 @@ void kmain(void) {
   init_idt();
 
   // init pic
+  PIC_remap(0x80, 0x88);
 
   // init keyboard
   // keyboard_init();
   
-  
   register_irq(0x69, &irq_69, NULL);
 
-  // sti();
-  // printk("[KERNEL] interupts enabled\n");
-  // __asm__ volatile ("INT 0x69");
-  // cli();
+  sti();
+  printk("[KERNEL] interupts enabled\n");
+  __asm__ volatile ("INT 0x69");
+  cli();
     
-
 
   printk("[KERNEL] Done initializing\nPress SPACE to clear screen\n");
   while (1);
-  while (get_key() != ' '); 
-  VGA_clear();
+  // while (get_key() != ' '); 
+  // VGA_clear();
 
-  while(1) {
-    // echo
-    printk("%c", get_key());
-  }
+  // while(1) {
+  //   // echo
+  //   printk("%c", get_key());
+  // }
 }
 
 

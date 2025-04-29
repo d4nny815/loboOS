@@ -7,21 +7,9 @@ isr_stub_%+%1:
 %if %2 = 0
     push 0          ; dummy push to be stack aligned with error code
 %endif
-    push rax
-    push rbx
-    push rcx
-    push rdx
-    push rbp
     push rdi
     push rsi
-    push r8
-    push r9
-    push r10
-    push r11
-    push r12
-    push r13
-    push r14
-    push r15
+    
     mov rdi, %1
 %if %2 = 1
     mov  rsi, [rsp + 8 * 16]   ; error code
@@ -32,6 +20,20 @@ isr_stub_%+%1:
 %endmacro
 
 isr_common:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rbp
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+
     call c_irq_handler
 
     ; restore context
@@ -43,13 +45,13 @@ isr_common:
     pop r10
     pop r9
     pop r8
-    pop rsi
-    pop rdi
     pop rbp
     pop rdx
     pop rcx
     pop rbx
     pop rax
+    pop rsi
+    pop rdi
     add rsp, 8          ; pop error code
     iretq
 
