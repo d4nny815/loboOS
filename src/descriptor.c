@@ -8,6 +8,7 @@
 /* === Project headers ==================================================== */
 #include "descriptor.h"
 #include "string.h"
+#include "print.h"
 
 /* === Private (module-only) headers ====================================== */
 typedef struct {
@@ -47,6 +48,7 @@ static csDescriptor_t GDT[NUM_DESCRIPTORS] = {0};
 static GDTR_t gdtr;
 
 /* === Forward (static) function prototypes ============================== */
+static inline void reloadSegments(void);
 
 /* === Public function definitions ======================================= */
 void init_gdt(void) {
@@ -64,10 +66,34 @@ void init_gdt(void) {
 
   // load gdt
   __asm__ volatile ("lgdt %0" : : "m"(gdtr));
+  
+  // long return and reload data seg regs
+  __asm__ volatile (
+    "push 0x08\n\t"               // Push code segment to stack, 0x08 is a stand-in for your code segment
+    "lea rax, [rip + 1f]\n\t"     // Load address of label 1 into RAX
+    "push rax\n\t"
+    "lretq\n\t"                   // Far return to reload CS
+    
+    "1:\n\t"                      // Label 1: reload data segments
+    "mov ax, 0\n\t"               // Data Segment selector
+    "mov ss, ax\n\t"
+    "mov ds, ax\n\t"
+    "mov es, ax\n\t"
+    "mov fs, ax\n\t"
+    "mov gs, ax\n\t"
+    :
+    :
+    : "rax", "memory"
+);
+
+  printk("[DESCRIPTOR] GDT initialized\n");
 }
 
 
 /* === Private (static) function definitions ============================= */
+static inline void reloadSegments(void) {
+  
+}
 
 
 /* === End of file ======================================================= */
