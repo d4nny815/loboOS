@@ -27,19 +27,21 @@ void kmain(void) {
   init_gdt();
 
   // init idt
+  init_idt();
 
   // init pic
 
   // init keyboard
-
+  // keyboard_init();
   
-  // register_irq(0x69, &irq_69, NULL);
-  // idt_init();
-// 
+  
+  register_irq(0x69, &irq_69, NULL);
+
+  // sti();
+  // printk("[KERNEL] interupts enabled\n");
   // __asm__ volatile ("INT 0x69");
   // cli();
-  
-  // keyboard_init();
+    
 
 
   printk("[KERNEL] Done initializing\nPress SPACE to clear screen\n");

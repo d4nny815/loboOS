@@ -37,18 +37,17 @@ typedef struct {
 typedef struct {
   uint16_t limit;
   uint64_t base;
-} __attribute__((packed)) iDescriptor_t;
+} __attribute__((packed)) IDTR_t;
 
 typedef struct {
   irqHandler_t callback;
   void *cb_arg;
 } irqTableEntry_t;
 
-
 /* === File-scope (static) variables ===================================== */
 irqTableEntry_t irq_table[IDT_MAX_DESCRIPTORS] = {0};
 idtEntry_t idt[IDT_MAX_DESCRIPTORS] __attribute__((aligned(0x10))) ;
-iDescriptor_t idescr;
+IDTR_t idescr;
 static bool vectors[IDT_MAX_DESCRIPTORS];
 extern uintptr_t isr_stub_table[];
 
@@ -56,7 +55,7 @@ extern uintptr_t isr_stub_table[];
 static void idt_set_descriptor(uint8_t vector, uintptr_t isr_addr);
 
 /* === Public function definitions ======================================= */
-void idt_init() {
+void init_idt() {
   idescr.base = (uintptr_t)idt;
   idescr.limit = sizeof(idt) - 1;
 
@@ -66,7 +65,8 @@ void idt_init() {
   }
 
   __asm__ volatile ("lidt %0" : : "m"(idescr));
-  sti();
+
+  printk("[INTERUPTS] IDT initialized\n");
 }
 
 void register_irq(uint8_t intr_num, irqHandler_t callback, void* state) {

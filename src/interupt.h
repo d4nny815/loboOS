@@ -18,6 +18,6 @@ static inline void sti() {
 typedef void (*irqHandler_t)(int, int, void*);
 
 void register_irq(uint8_t intr_num, irqHandler_t callback, void* state);
-void idt_init(void);
+void init_idt(void);
 
 #endif /* interupt.h */
