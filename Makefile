@@ -4,7 +4,7 @@ LD          = $(COMP_PATH)/x86_64-elf-ld
 NASM        = nasm
 
 CFLAGS      = -Wall -Werror -g -ffreestanding -mno-red-zone -masm=intel
-ASMFLAGS    = -felf64
+ASMFLAGS    = -felf64 -g
 LDFLAGS     = -n -T $(LINKER_PATH) -nostdlib 
 
 KERNEL_BIN  = kernel.bin

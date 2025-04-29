@@ -254,10 +254,8 @@ static void ps2_ctrl_init() {
   uint8_t config_byte = inb(PS2_DATA);
 
   // bit crunch
-  config_byte &= ~(1 << 0); // clear first port interrupt
-  config_byte &= ~(1 << 1); // clear second port interrupt
-  config_byte &= ~(1 << 6); // clear translation
-
+  config_byte = (1 << 1) | (1 << 6);
+  
   // write config byte
   wait_input_clear();
   outb(PS2_CMD, 0x60);

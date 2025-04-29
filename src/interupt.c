@@ -1,0 +1,108 @@
+/****************************************************************************
+ *  module_name.c
+ ****************************************************************************/
+
+/* === Public headers ===================================================== */
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+/* === Project headers ==================================================== */
+#include "interupt.h"
+#include "print.h"
+
+/* === Private (module-only) headers ====================================== */
+
+/* === Compile-time configuration macros ================================= */
+
+/* === Diagnostics switches (undef to disable) ============================ */
+
+/* === File-scope constants ============================================== */
+
+/* === File-scope types =================================================== */
+typedef struct {
+  uint16_t isr_low;
+  uint16_t target_sel;
+  uint16_t ist      : 3;
+  uint16_t res1     : 5;
+  uint16_t type     : 4;
+  uint16_t zero     : 1;
+  uint16_t dpl      : 2;
+  uint16_t present  : 1;
+  uint16_t isr_mid;
+  uint32_t isr_high;
+  uint32_t res2;
+} __attribute__((packed)) idtEntry_t;
+
+typedef struct {
+  uint16_t limit;
+  uint64_t base;
+} __attribute__((packed)) iDescriptor_t;
+
+typedef struct {
+  irqHandler_t callback;
+  void *cb_arg;
+} irqTableEntry_t;
+
+
+/* === File-scope (static) variables ===================================== */
+irqTableEntry_t irq_table[IDT_MAX_DESCRIPTORS] = {0};
+idtEntry_t idt[IDT_MAX_DESCRIPTORS] __attribute__((aligned(0x10))) ;
+iDescriptor_t idescr;
+static bool vectors[IDT_MAX_DESCRIPTORS];
+extern uintptr_t isr_stub_table[];
+
+/* === Forward (static) function prototypes ============================== */
+static void idt_set_descriptor(uint8_t vector, uintptr_t isr_addr);
+
+/* === Public function definitions ======================================= */
+void idt_init() {
+  idescr.base = (uintptr_t)idt;
+  idescr.limit = sizeof(idt) - 1;
+
+  for (int i = 0; i < IDT_MAX_DESCRIPTORS; i++) {
+      idt_set_descriptor(i, isr_stub_table[i]);
+      vectors[i] = true;
+  }
+
+  __asm__ volatile ("lidt %0" : : "m"(idescr));
+  sti();
+}
+
+void register_irq(uint8_t intr_num, irqHandler_t callback, void* state) {
+  irq_table[intr_num].callback = callback;
+  irq_table[intr_num].cb_arg = state;
+}
+
+/* === Private (static) function definitions ============================= */
+void c_irq_handler(uint8_t intr_num, uint32_t err_code) {
+  cli();
+  if (irq_table[intr_num].callback == NULL) {
+    printk("[C_IRQ_HANDLER] BAD interrupt\n\
+      \tintr : %hu, err : %u\n", intr_num, err_code);
+
+      while (1);  // SPIN
+  }
+
+  irq_table[intr_num].callback(intr_num, err_code, NULL);
+  sti();
+}
+
+static void idt_set_descriptor(uint8_t intr_num, uintptr_t isr_addr) {
+  idtEntry_t* descriptor = &idt[intr_num];
+
+  descriptor->isr_low     = isr_addr & 0xFFFF;
+  descriptor->target_sel  = GDT_OFFSET_KERNEL_CODE;
+  descriptor->ist         = 0;
+  descriptor->res1        = 0;
+  descriptor->type        = 0xE;
+  descriptor->zero        = 0;
+  descriptor->dpl         = 0; 
+  descriptor->present     = 1;
+  descriptor->isr_mid     = (isr_addr >> 16) & 0xFFFF;
+  descriptor->isr_high    = (isr_addr >> 32) & 0xFFFFFFFF;
+  descriptor->res2        = 0;
+}
+
+
+/* === End of file ======================================================= */

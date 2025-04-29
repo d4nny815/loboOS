@@ -1,27 +1,47 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <stddef.h>
 
 #include "vga.h"
 #include "print.h"
 #include "keyboard.h"
+#include "interupt.h"
+#include "portIO.h"
 
 void printk_tests();
 
+void irq_69(int intr_num, int err_code, void* state) {
+  printk("Interrupt properly 0x69\n");
+}
+
+bool db_flag = 1;
 void kmain(void) {
-  bool db_flag = 1;
   while (!db_flag);
   
   VGA_clear();
 
-  VGA_display_char('c');
-  VGA_display_str("Testing a string\n");
+  // init vga
 
-  printk_tests();
+  // init gdt
 
+  // init idt
+
+  // init pic
+
+  // init keyboard
+
+  
+  register_irq(0x69, &irq_69, NULL);
+  idt_init();
+
+  __asm__ volatile ("INT 0x69");
+  cli();
+  
   keyboard_init();
 
-  printk("Press SPACE to clear screen\n");
+
+  printk("[KERNEL] Done initializing\nPress SPACE to clear screen\n");
   while (get_key() != ' '); 
   VGA_clear();
 
@@ -30,6 +50,8 @@ void kmain(void) {
     printk("%c", get_key());
   }
 }
+
+
 
 void printk_tests() {
   // %c tests
