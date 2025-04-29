@@ -8,6 +8,7 @@
 #include "keyboard.h"
 #include "interupt.h"
 #include "portIO.h"
+#include "descriptor.h"
 
 void printk_tests();
 
@@ -15,15 +16,15 @@ void irq_69(int intr_num, int err_code, void* state) {
   printk("Interrupt properly 0x69\n");
 }
 
-bool db_flag = 1;
+bool db_flag = 0;
 void kmain(void) {
   while (!db_flag);
   
+  // init vga
   VGA_clear();
 
-  // init vga
-
   // init gdt
+  init_gdt();
 
   // init idt
 
@@ -32,16 +33,17 @@ void kmain(void) {
   // init keyboard
 
   
-  register_irq(0x69, &irq_69, NULL);
-  idt_init();
-
-  __asm__ volatile ("INT 0x69");
-  cli();
+  // register_irq(0x69, &irq_69, NULL);
+  // idt_init();
+// 
+  // __asm__ volatile ("INT 0x69");
+  // cli();
   
-  keyboard_init();
+  // keyboard_init();
 
 
   printk("[KERNEL] Done initializing\nPress SPACE to clear screen\n");
+  while (1);
   while (get_key() != ' '); 
   VGA_clear();
 
