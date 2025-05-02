@@ -15,10 +15,8 @@ static inline void sti() {
   __asm__ volatile ("sti");
 }
 
-typedef void (*irqHandler_t)(int, int, void*);
+typedef void (*irqHandler_t)(void*);
 
-void PIC_remap(int offset1, int offset2);
-void pic_disable(void);
 void register_irq(uint8_t intr_num, irqHandler_t callback, void* state);
 void init_idt(void);
 

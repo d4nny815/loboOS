@@ -1,6 +1,8 @@
 #include "vga.h"
 
 #include "string.h"
+#include "interupt.h"
+#include <stdbool.h>
 
 static uint16_t* vga_buffer = (uint16_t*)VGA_BASE;
 static int cursor = 0;
@@ -34,6 +36,8 @@ void VGA_clear(void) {
 
 // write a char to the screen
 void VGA_display_char(char c) {
+  // bool enable_intr = 0;
+
   if (c == '\n') {
     cursor = (get_line(cursor) + 1) * WIDTH;
     if (cursor >= BUF_SIZE) scroll();

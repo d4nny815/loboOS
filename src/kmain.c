@@ -7,12 +7,14 @@
 #include "print.h"
 #include "keyboard.h"
 #include "interupt.h"
+#include "pic.h"
 #include "portIO.h"
 #include "descriptor.h"
 
 void printk_tests();
 
-void irq_69(int intr_num, int err_code, void* state) {
+void irq_69(void* state) {
+  (void)state;
   printk("Interrupt properly 0x69\n");
 }
 
@@ -30,19 +32,17 @@ void kmain(void) {
   init_idt();
 
   // init pic
-  PIC_remap(0x80, 0x88);
+  init_PICs();
 
   // init keyboard
-  // keyboard_init();
+  keyboard_init();
   
-  register_irq(0x69, &irq_69, NULL);
+  // register_irq(0x69, &irq_69, NULL);
 
   sti();
   printk("[KERNEL] interupts enabled\n");
-  __asm__ volatile ("INT 0x69");
-  cli();
-    
-
+  
+  
   printk("[KERNEL] Done initializing\nPress SPACE to clear screen\n");
   while (1);
   // while (get_key() != ' '); 

@@ -88,10 +88,9 @@ generate_isr_stub 28, 0
 generate_isr_stub 29, 0
 generate_isr_stub 30, 1
 generate_isr_stub 31, 0
-generate_isr_stub 32, 1
 
-%assign i 33
-%rep 223
+%assign i 32
+%rep 224
     generate_isr_stub i, 0
 %assign i i+1
 %endrep

@@ -4,11 +4,14 @@
 
 /* === Public headers ===================================================== */
 #include <stdbool.h>
+#include <stddef.h>
 
 /* === Project headers ==================================================== */
 #include "keyboard.h"
 #include "print.h"
 #include "portIO.h"
+#include "interupt.h"
+#include "pic.h"
 
 /* === Private (module-only) headers ====================================== */
 
@@ -25,11 +28,6 @@
 #define KB_TESTPASSED       (0xAA)
 
 /* === Diagnostics switches (undef to disable) ============================ */
-// #if defined(DEBUG) && DEBUG
-// #   define DBG(fmt, ...) printf(MODULE_TAG ": " fmt "\n", ##__VA_ARGS__)
-// #else
-// #   define DBG(...)      do {} while (0)
-// #endif
 
 /* === File-scope constants ============================================== */
 static const char scancode_map_unshifted[128] = {
@@ -141,12 +139,16 @@ static const char scancode_map_shifted[128] = {
 };
 
 /* === File-scope types =================================================== */
-// typedef struct {int x};
+struct state_t {
+  bool shift_on;
+  bool release_key;
+  char last_char;
+};
 
 /* === File-scope  variables ===================================== */
-// static int x;
+static struct state_t state = {0, 0};
 
-/* === private function prototypes ============================== */
+  /* === private function prototypes ============================== */
 static void ps2_ctrl_init();
 static char get_scancode();
 static inline void wait_output_set();
@@ -154,9 +156,41 @@ static inline void wait_input_clear();
 static inline void keyboard_send_cmd(uint8_t cmd);
 
 /* === Public function definitions ======================================= */
-void keyboard_init() {
-  printk("[KEYBOARD] Initing keyboard driver\n");
+void irq(void* arg) {
+  struct state_t* state = (struct state_t*)arg;
+  
+  uint8_t scan_code = get_scancode();
+  // printk("scancode: %hx %p => ", scan_code, state);
 
+  if (scan_code == 0xfa) goto KEYBOARD_IRQ_DONE;
+
+  if (scan_code == 0x12) {
+    state->shift_on = !state->shift_on;
+    goto KEYBOARD_IRQ_DONE;
+  } 
+
+  if (scan_code == 0xf0) {
+    state->release_key = true;
+    goto KEYBOARD_IRQ_DONE;
+  }
+
+  if (state->release_key) {
+    state->release_key = false;
+    goto KEYBOARD_IRQ_DONE;
+  }
+
+  if (state->shift_on) {
+    printk("%c", scancode_map_shifted[scan_code]);
+  } else {
+    printk("%c", scancode_map_unshifted[scan_code]);
+  }
+
+  
+  KEYBOARD_IRQ_DONE:
+  PIC_sendEOI(IRQ_KEYBOARD);
+}
+
+void keyboard_init() {
   // init ps2 ctrl
   ps2_ctrl_init();
 
@@ -181,6 +215,9 @@ void keyboard_init() {
   
   // enable keyboard
   keyboard_send_cmd(0xF4);
+
+  register_irq(KEYBOARD_INTR_NUM, &irq, &state);
+  PIC_enable(IRQ_KEYBOARD);
 
   printk("[KEYBOARD] Done initing Keyboard\n");
 }
@@ -210,6 +247,7 @@ char get_key() {
   // printk("%hx     ", scan_code);
 }
 
+
 /* === Private (static) function definitions ============================= */
 static inline void wait_input_clear() {
   while (inb(PS2_STATUS) & PS2_STATUS_INPUT);
@@ -232,8 +270,6 @@ static inline void keyboard_send_cmd(uint8_t cmd) {
 }
 
 static void ps2_ctrl_init() {
-  printk("[KEYBOARD] Initing ps2 controller\n");
-
   // disable ps2 port1
   wait_input_clear();
   outb(PS2_CMD, 0xAD);
@@ -254,7 +290,8 @@ static void ps2_ctrl_init() {
   uint8_t config_byte = inb(PS2_DATA);
 
   // bit crunch
-  config_byte = (1 << 1) | (1 << 6);
+  config_byte |= (1 << 0); // intr enable
+  config_byte &= ~(1 << 6); // clear translation
   
   // write config byte
   wait_input_clear();
@@ -292,10 +329,7 @@ static void ps2_ctrl_init() {
   printk("[KEYBOARD] Done initing PS2 Controller\n");
 }
 
-
-
 static char get_scancode() {
-  wait_output_set();
   uint8_t scan_code = inb(PS2_DATA);
 
   return scan_code;  

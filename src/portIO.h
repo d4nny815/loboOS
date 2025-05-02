@@ -16,5 +16,9 @@ static inline uint8_t inb(uint16_t port) {
   return ret;
 }
 
+static inline void io_wait() {
+  for (volatile int i = 0x1000; i > 0; i--);
+}
+
 
 #endif /* portIO.h */
