@@ -6,6 +6,10 @@
 #define IDT_MAX_DESCRIPTORS     (256)
 #define GDT_OFFSET_KERNEL_CODE  (8)
 #define NUM_IRQS                (IDT_MAX_DESCRIPTORS)
+#define DF_INTR_NUM             (8)
+#define GPF_INTR_NUM            (13)
+#define PF_INTR_NUM             (14)
+
 
 static inline void cli() {
   __asm__ volatile ("cli");

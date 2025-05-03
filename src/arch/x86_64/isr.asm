@@ -12,7 +12,7 @@ isr_stub_%+%1:
     
     mov rdi, %1
 %if %2 = 1
-    mov  rsi, [rsp + 8 * 16]   ; error code
+    mov  rsi, [rsp + 8 * 2]   ; error code
 %else
     mov  rsi, 0   
 %endif
@@ -49,10 +49,12 @@ isr_common:
     pop rdx
     pop rcx
     pop rbx
+
+    ; add rsp, 8          ; restore alignment
     pop rax
     pop rsi
     pop rdi
-    add rsp, 8          ; pop error code
+    add rsp, 8          ; pop error code 
     iretq
 
 
@@ -69,7 +71,7 @@ generate_isr_stub 9,  0
 generate_isr_stub 10, 0
 generate_isr_stub 11, 0
 generate_isr_stub 12, 0
-generate_isr_stub 13, 0
+generate_isr_stub 13, 1
 generate_isr_stub 14, 1
 generate_isr_stub 15, 0
 generate_isr_stub 16, 0
@@ -86,7 +88,7 @@ generate_isr_stub 26, 0
 generate_isr_stub 27, 0
 generate_isr_stub 28, 0
 generate_isr_stub 29, 0
-generate_isr_stub 30, 1
+generate_isr_stub 30, 0
 generate_isr_stub 31, 0
 
 %assign i 32

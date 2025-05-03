@@ -9,12 +9,16 @@
 
 /* === Project headers ==================================================== */
 #include "interupt.h"
+#include "descriptor.h"
 #include "print.h"
 #include "portIO.h"
 
 /* === Private (module-only) headers ====================================== */
 
 /* === Compile-time configuration macros ================================= */
+#define DOUBLE_FAULT_INTR       (8)
+#define PAGE_FAULT_INTR         (14)
+#define GEN_PROC_FAULT_INTR     (13)
 
 /* === Diagnostics switches (undef to disable) ============================ */
 
@@ -86,6 +90,7 @@ void c_irq_handler(uint8_t intr_num, uint32_t err_code) {
     while (1);  // SPIN
   }
 
+  printk("[C IRQ HANDLER] handling %hu with err: %u\n", intr_num, err_code);
   irq_table[intr_num].callback(irq_table[intr_num].cb_arg);
 }
 
@@ -94,7 +99,21 @@ static void idt_set_descriptor(uint8_t intr_num, uintptr_t isr_addr) {
 
   descriptor->isr_low     = isr_addr & 0xFFFF;
   descriptor->target_sel  = GDT_OFFSET_KERNEL_CODE;
-  descriptor->ist         = 0;
+  
+  switch (intr_num) {
+    case DOUBLE_FAULT_INTR:
+      descriptor->ist = DF_IST;
+      break;
+    case GEN_PROC_FAULT_INTR:
+      descriptor->ist = GP_IST;
+      break;
+    case PAGE_FAULT_INTR:
+      descriptor->ist = PF_IST;
+      break;
+    default:
+      descriptor->ist = 0;
+  }
+  
   descriptor->res1        = 0;
   descriptor->type        = 0xE;
   descriptor->zero        = 0;

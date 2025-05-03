@@ -11,16 +11,36 @@
 #include "portIO.h"
 #include "descriptor.h"
 
-void printk_tests();
+void cause_pf_fault();
+void cause_gpf_fault();
+void cause_df_fault();
 
-void irq_69(void* state) {
-  (void)state;
-  printk("Interrupt properly 0x69\n");
+void df_isr(void* args) {
+  (void)args;
+  printk("[EXCEPTION] Double Fault\n");
+  __asm__ volatile ("hlt");
 }
 
-bool db_flag = 1;
+void pf_isr(void* args) {
+  (void)args;
+  uintptr_t cr2;
+  __asm__ volatile("mov %0, cr2" : "=r"(cr2));
+  printk("[EXCEPTION] Page Fault at address 0x%lx\n", cr2);
+  check_ist_stack(PF_IST);
+}
+
+void gpf_isr(void* args) {
+  (void)args;
+  printk("[EXCEPTION] General Protection Fault\n");
+  const size_t PF_ADDR = 0x00007FFFFFFFF000;
+  *((volatile int*)(PF_ADDR)) = 0;
+  check_ist_stack(GP_IST);
+}
+
+
+
+bool db_flag = 0;
 void kmain(void) {
-  while (!db_flag);
   
   // init vga
   VGA_clear();
@@ -37,70 +57,41 @@ void kmain(void) {
   // init keyboard
   keyboard_init();
   
-  // register_irq(0x69, &irq_69, NULL);
+  register_irq(DF_INTR_NUM, &df_isr, NULL);
+  register_irq(GPF_INTR_NUM, &gpf_isr, NULL);
+  register_irq(PF_INTR_NUM, &pf_isr, NULL);
+
+  while (!db_flag);
 
   sti();
   printk("[KERNEL] interupts enabled\n");
   
   
-  printk("[KERNEL] Done initializing\nPress SPACE to clear screen\n");
+  printk("[KERNEL] Done initializing\n");
+
+  // cause_pf_fault();
+  // cause_gpf_fault();
+  cause_df_fault();
+  
+  // *((volatile int*)(0x00007FFFFFFFF000)) = 0;
+  
+  // __asm__ volatile ("hlt");
   while (1);
-  // while (get_key() != ' '); 
-  // VGA_clear();
-
-  // while(1) {
-  //   // echo
-  //   printk("%c", get_key());
-  // }
 }
 
-
-
-void printk_tests() {
-  // %c tests
-  printk("%c => 'a', ", 'a');
-  printk("%c => 'Q', ", 'Q');
-  printk("%c => '9'\n", 256 + '9'); // 313 wraps to ASCII 57 = '9'
-
-  // %s and %% tests
-  printk("%s => 'test string'\n", "test string");
-  printk("foo%sbar => 'fooblahbar'\n", "blah");
-  printk("foo%%sbar => 'foo%%sbar'\n"); // Literal %
-
-  // %d tests
-  printk("%d => '-2147483648', ", INT_MIN);
-  printk("%d => '2147483647'\n", INT_MAX);
-
-  // %u tests
-  printk("%u => '0', ", 0);
-  printk("%u => '4294967295'\n", UINT_MAX);
-
-  // %x tests
-  printk("%x => 'deadbeef'\n", 0xDEADbeef);
-
-  // %p test
-  printk("%p => '0xFFFFFFFFFFFFFFFF'\n", (void*)UINTPTR_MAX);
-
-  // %h[dux] tests
-  printk("%hd => '-32768', ", (short)0x8000);
-  printk("%hd => '32767', ", (short)0x7FFF);
-  printk("%hu => '65535', ", (unsigned short)0xFFFF);
-  printk("%hx => 'ffff'\n", (unsigned short)0xFFFF); 
-
-  // %l[dux] tests
-  printk("%ld => '-9223372036854775808'\n", LONG_MIN);
-  printk("%ld => '9223372036854775807'\n", LONG_MAX);
-  printk("%lu => '18446744073709551615'\n", ULONG_MAX);
-  printk("%lx => 'ffffffffffffffff'\n", ULONG_MAX);
-
-  // %q[dux] tests
-  printk("%qd => '-9223372036854775808'\n", (long long)LONG_MIN);
-  printk("%qd => '9223372036854775807'\n", (long long)LONG_MAX);
-  printk("%qu => '18446744073709551615'\n", (unsigned long long)ULONG_MAX);
-  printk("%qx => 'ffffffffffffffff'\n", (unsigned long long)ULONG_MAX);
-
-  printk("[PRINT] Done with tests");
+void cause_pf_fault() {
+  const size_t PF_ADDR = 0x00007FFFFFFFF000;
+  *((volatile int*)(PF_ADDR)) = 0;
 }
 
+void cause_gpf_fault() {
+  __asm__ volatile (
+    "mov ax, 0x23\n\t"  // Invalid or ring-3 selector
+    "mov ss, ax\n\t"    // Causes GPF in ring 0
+  );
+}
 
-
+void cause_df_fault() {
+  // Trigger a fault in GPF handler to cause a double fault
+  cause_gpf_fault();  // The GPF handler then triggers a PF
+}
