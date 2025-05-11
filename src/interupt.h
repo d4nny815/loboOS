@@ -11,11 +11,11 @@
 #define PF_INTR_NUM             (14)
 
 
-static inline void cli() {
+static inline void __attribute__((always_inline)) cli() {
   __asm__ volatile ("cli");
 } 
 
-static inline void sti() {
+static inline void __attribute__((always_inline)) sti() {
   __asm__ volatile ("sti");
 }
 

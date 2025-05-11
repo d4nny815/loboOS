@@ -18,6 +18,7 @@ void cause_df_fault();
 void df_isr(void* args) {
   (void)args;
   printk("[EXCEPTION] Double Fault\n");
+  check_ist_stack(DF_IST);
   __asm__ volatile ("hlt");
 }
 
@@ -27,14 +28,14 @@ void pf_isr(void* args) {
   __asm__ volatile("mov %0, cr2" : "=r"(cr2));
   printk("[EXCEPTION] Page Fault at address 0x%lx\n", cr2);
   check_ist_stack(PF_IST);
+  __asm__ volatile ("hlt");
 }
 
 void gpf_isr(void* args) {
   (void)args;
   printk("[EXCEPTION] General Protection Fault\n");
-  const size_t PF_ADDR = 0x00007FFFFFFFF000;
-  *((volatile int*)(PF_ADDR)) = 0;
   check_ist_stack(GP_IST);
+  __asm__ volatile ("hlt");
 }
 
 
@@ -93,5 +94,5 @@ void cause_gpf_fault() {
 
 void cause_df_fault() {
   // Trigger a fault in GPF handler to cause a double fault
-  cause_gpf_fault();  // The GPF handler then triggers a PF
+  __asm__ volatile ("INT 0x8");
 }

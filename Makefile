@@ -3,7 +3,8 @@ CC          = $(COMP_PATH)/x86_64-elf-gcc
 LD          = $(COMP_PATH)/x86_64-elf-ld
 NASM        = nasm
 
-CFLAGS      = -Wall -Werror -g -ffreestanding -mno-red-zone -masm=intel
+CFLAGS      = -Wall -Werror -g -ffreestanding -mno-red-zone -masm=intel -finline-functions -findirect-inlining
+
 ASMFLAGS    = -felf64 -g
 LDFLAGS     = -n -T $(LINKER_PATH) -nostdlib 
 
